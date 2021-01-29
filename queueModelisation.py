@@ -1,4 +1,5 @@
 from ciw import *
+import matplotlib.pyplot as plt
 
 """
 1) Modéliser le réseau de files d’attente à l’aide de Ciw avec la configuration suivante :
@@ -37,54 +38,11 @@ Files d'attentes (4) :
 __________________________________________________________
 
 
-...     N = ciw.create_network(
-...     arrival_distributions=[ciw.dists.Exponential(0.3),
-...                            ciw.dists.Exponential(0.2),
-...                            ciw.dists.NoArrivals()],
-...     service_distributions=[ciw.dists.Exponential(1.0),
-...                            ciw.dists.Exponential(0.4),
-...                            ciw.dists.Exponential(0.5)],
-...     routing=[[0.0, 0.3, 0.7],
-...              [0.0, 0.0, 1.0],
-...              [0.0, 0.0, 0.0]],
-...     number_of_servers=[1, 2, 2] 
-...    )
-
-
 """
 
-n_server = 1
-I = 0
-Y = 0
-A = random_choice(range(0, 35))
-F = 42200
-B = 16000
-C = 707000
-S = 1500000
-R = 10000000
-p = B / F
 
-### DEF SI ###
-SI_arr_dist = ciw.dists.Exponential(A)
-SI_srvc_dist = ciw.dists.Deterministic(I)
-### END DEF ###
 
-### DEF SR ###
-SR_arr_dist = ciw.dists.Exponential((A * F) / B)
-SR_srvc_dist = ciw.dists.Exponential(1 / (Y + (B / R)))
-### END DEF ###
-
-### DEF SS ###
-SS_arr_dist = ciw.dists.Exponential((A * F) / B)
-SS_srvc_dist = ciw.dists.Deterministic(B / S)
-### END DEF ###
-
-### DEF SC ###
-SC_arr_dist = ciw.dists.Exponential((A * F) / B)
-SC_srvc_dist = ciw.dists.Deterministic(B / C)
-### END DEF ###
-"""
-print("_______________________________")
+"""print("_______________________________")
 
 print("\t Taux moyen d'Arrivée")
 print(f"\t * A : {A}")
@@ -103,28 +61,166 @@ print(f"\t * SR : {((A * F) / B)/(1 / (Y + (B / R)))}")
 print(f"\t * SS : {((A * F) / B)/(B / S)}")
 print(f"\t * SC : {((A * F) / B)/(B / C)}")
 
-print("_______________________________")
-"""
+print("_______________________________")"""
 
-N = ciw.create_network(
-    arrival_distributions=[SI_arr_dist, SR_arr_dist, SS_arr_dist, SC_arr_dist],
-    service_distributions=[SI_srvc_dist, SR_srvc_dist, SS_srvc_dist, SC_srvc_dist],
-    routing=[[0, 1, 0, 0],
-             [0, 0, 1, 0],
-             [0, 0, 0, 1],
-             [0, 1 - p, 0, 0]
-             ],
-    number_of_servers=[1, 1, 1, 1]
-)
 
-Q = ciw.Simulation(N)
-Q.simulate_until_max_time(100)
-recs = Q.get_all_records()
-completed = [r for r in recs if r.node == 4 and r.arrival_date < 180]
-num_cmplted = len(completed)
+avgTime = []
+def createNetwork(
+        n_server = 1,
+        I = 0,
+        Y = 0,
+        A = 16,
+        F = 42200,
+        B = 16000,
+        C = 707000,
+        S = 1500000,
+        R = 10000000,
+        nbServerSR = 1
+):
+    p = B / F
+    ### DEF SI ###
+    SI_arr_dist = ciw.dists.Exponential(A)
+    SI_srvc_dist = ciw.dists.Deterministic(I)
+    ### END DEF ###
 
-print(f"Cmplptd transactions : {num_cmplted}")
-# print(f"RECORD CLIENT 0 : {completed[0]} ")
+    ### DEF SR ###
+    SR_arr_dist = ciw.dists.Exponential((A * F) / B)
+    SR_srvc_dist = ciw.dists.Exponential(1 / (Y + (B / R)))
+    ### END DEF ###
 
-srvcTimes = [r.service_time for r in recs]
-print(sum(srvcTimes)/len(srvcTimes))
+    ### DEF SS ###
+    SS_arr_dist = ciw.dists.Exponential((A * F) / B)
+    SS_srvc_dist = ciw.dists.Deterministic(B / S)
+    ### END DEF ###
+
+    ### DEF SC ###
+    SC_arr_dist = ciw.dists.Exponential((A * F) / B)
+    SC_srvc_dist = ciw.dists.Deterministic(B / C)
+    ### END DEF ###
+    N = ciw.create_network(
+        arrival_distributions=[SI_arr_dist, SR_arr_dist, SS_arr_dist, SC_arr_dist],
+        service_distributions=[SI_srvc_dist, SR_srvc_dist, SS_srvc_dist, SC_srvc_dist],
+        routing=[[0, 1, 0, 0],
+                 [0, 0, 1, 0],
+                 [0, 0, 0, 1],
+                 [0, 1 - p, 0, 0]
+                 ],
+        number_of_servers=[1, nbServerSR, 1, 1]
+    )
+    return N
+
+def execSimulation(time, nbExec, N):
+
+    avgs = []
+    for i in range(nbExec):
+
+        Q = ciw.Simulation(N)
+        Q.simulate_until_max_time(time)
+        recs = Q.get_all_records()
+        grpdRecs = sorted(recs, key=lambda r: r[0])
+        for i in range(0, len(grpdRecs), 4):
+            has_ended = False
+            client_service_time = []
+            client_rec = grpdRecs[i:i+3]
+            for rec in client_rec:
+                if rec.destination == -1 and rec.exit_date < time:
+                    has_ended = True
+                client_service_time.append(rec.service_time)
+            if(has_ended):
+                avgs.append(sum(client_service_time))
+
+        # print("RECS : "+str(grpdRecs))
+
+        completed = [r for r in recs if r.destination == -1 and r.arrival_date < time]
+        num_cmplted = len(completed)
+        print(f"Cmplptd transactions : {num_cmplted}")
+        # print(f"RECORD CLIENT 0 : {completed[0]} ")
+    return avgs
+
+
+def varExecTimeSimulations():
+
+    n = 50
+    times = []
+    for i in range(1,6):
+        avg = execSimulation(i*n, 1, createNetwork())
+        avgTime.append(sum(avg)/len(avg))
+        times.append(i*n)
+
+    fig = plt.figure()
+    subplot = fig.add_subplot()
+    subplot.set_ybound(0, avgTime[0]+avgTime[0]/2)
+    subplot.plot(times, avgTime, scaley=False)
+    subplot.set_xlabel("Execution Time")
+    subplot.set_ylabel("Average Response Time")
+    subplot.set_title("Evolution of Average Response Time\ndepending on Simulation Execution Time.")
+    plt.show()
+
+
+def varASimulations():
+    A = [a for a in range(1,36)]
+    avg = []
+    for a in A:
+        print(str(a)+" ", end=" - ")
+        avgTmp = execSimulation(10, 1, createNetwork(A=a))
+        avg.append(sum(avgTmp)/len(avgTmp))
+
+    fig = plt.figure()
+    subplot = fig.add_subplot()
+    subplot.plot(A, avg)
+    subplot.set_xlabel("A")
+    subplot.set_ylabel("Average Response Time")
+    subplot.set_ybound(0, avg[0] + avg[0] / 2)
+    subplot.set_title("Evolution of Average Response Time\ndepending on the A parameter.")
+    plt.show()
+
+
+def multiVarSimulation():
+    A = [a for a in range(1, 36)]
+    avg = []
+    for a in A:
+        print(str(a) + " ", end=" - ")
+        avgTmp = execSimulation(10, 1, createNetwork(A=a))
+        avg.append(sum(avgTmp) / len(avgTmp))
+
+    R = 2 * 10000000
+    avg2R = []
+    for a in A:
+        print(str(a) + " ", end=" - ")
+        avgTmp = execSimulation(10, 1, createNetwork(A=a, R=R))
+        avg2R.append(sum(avgTmp) / len(avgTmp))
+
+    S = 2 * 1500000
+    avg2S = []
+    for a in A:
+        print(str(a) + " ", end=" - ")
+        avgTmp = execSimulation(10, 1, createNetwork(A=a, S=S))
+        avg2S.append(sum(avgTmp) / len(avgTmp))
+
+    nbServer = 2
+    avg2SR = []
+    for a in A:
+        print(str(a) + " ", end=" - ")
+        avgTmp = execSimulation(10, 1, createNetwork(A=a, nbServerSR=nbServer))
+        avg2SR.append(sum(avgTmp) / len(avgTmp))
+
+    fig = plt.figure()
+    subplot = fig.add_subplot()
+    subplot.plot(A, avg, 'y')
+    subplot.plot(A, avg2S, 'g')
+    subplot.plot(A, avg2R, 'b')
+    subplot.plot(A, avg2SR, 'r')
+    subplot.set_ybound(0, max(avg)*2)
+    subplot.set_xlabel("A")
+    subplot.set_ylabel("Average Response Time")
+    # subplot.set_ybound(0, avg[0] + avg[0] / 2)
+    subplot.set_title("Evolution of Average Response Time\ndepending on the A parameter.")
+    plt.show()
+
+
+
+
+
+varASimulations()
+
+
