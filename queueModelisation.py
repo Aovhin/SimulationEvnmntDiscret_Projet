@@ -83,7 +83,7 @@ SS_srvc_dist = ciw.dists.Deterministic(B / S)
 SC_arr_dist = ciw.dists.Exponential((A * F) / B)
 SC_srvc_dist = ciw.dists.Deterministic(B / C)
 ### END DEF ###
-
+"""
 print("_______________________________")
 
 print("\t Taux moyen d'Arrivée")
@@ -104,6 +104,7 @@ print(f"\t * SS : {((A * F) / B)/(B / S)}")
 print(f"\t * SC : {((A * F) / B)/(B / C)}")
 
 print("_______________________________")
+"""
 
 N = ciw.create_network(
     arrival_distributions=[SI_arr_dist, SR_arr_dist, SS_arr_dist, SC_arr_dist],
@@ -119,7 +120,11 @@ N = ciw.create_network(
 Q = ciw.Simulation(N)
 Q.simulate_until_max_time(100)
 recs = Q.get_all_records()
-num_cmplted = len([r for r in recs if r.node == 3 and r.arrival_date < 180])
+completed = [r for r in recs if r.node == 4 and r.arrival_date < 180]
+num_cmplted = len(completed)
 
 print(f"Cmplptd transactions : {num_cmplted}")
-print(f"RECORD CLIENT 0 : {recs[0]} ")
+# print(f"RECORD CLIENT 0 : {completed[0]} ")
+
+srvcTimes = [r.service_time for r in recs]
+print(sum(srvcTimes)/len(srvcTimes))
