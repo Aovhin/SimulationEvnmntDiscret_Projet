@@ -40,8 +40,6 @@ __________________________________________________________
 
 """
 
-
-
 """print("_______________________________")
 
 print("\t Taux moyen d'Arrivée")
@@ -63,19 +61,20 @@ print(f"\t * SC : {((A * F) / B)/(B / C)}")
 
 print("_______________________________")"""
 
-
 avgTime = []
+
+
 def createNetwork(
-        n_server = 1,
-        I = 0,
-        Y = 0,
-        A = 16,
-        F = 42200,
-        B = 16000,
-        C = 707000,
-        S = 1500000,
-        R = 10000000,
-        nbServerSR = 1
+        n_server=1,
+        I=0,
+        Y=0,
+        A=16,
+        F=42200,
+        B=16000,
+        C=707000,
+        S=1500000,
+        R=10000000,
+        nbServerSR=1
 ):
     p = B / F
     ### DEF SI ###
@@ -109,47 +108,55 @@ def createNetwork(
     )
     return N
 
-def execSimulation(time, nbExec, N):
 
+def execSimulation(time, nbExec, N):
     avgs = []
-    for i in range(nbExec):
+    for k in range(nbExec):
 
         Q = ciw.Simulation(N)
         Q.simulate_until_max_time(time)
         recs = Q.get_all_records()
-        grpdRecs = sorted(recs, key=lambda r: r[0])
-        for i in range(0, len(grpdRecs), 4):
+        grpd_recs = sorted(recs, key=lambda r: r[0])
+
+        i = 0
+        print(len(grpd_recs))
+        while i < len(grpd_recs):
             has_ended = False
             client_service_time = []
-            client_rec = grpdRecs[i:i+3]
-            for rec in client_rec:
-                if rec.destination == -1 and rec.exit_date < time:
-                    has_ended = True
-                client_service_time.append(rec.service_time)
-            if(has_ended):
+            client_rec = []
+            j = i
+            rec = grpd_recs[i]
+            while j < len(grpd_recs) and rec.id_number == grpd_recs[j].id_number:
+                client_rec += [grpd_recs[j]]
+                client_service_time += [grpd_recs[j].service_time]
+                has_ended = has_ended or (grpd_recs[j].node == 4 and grpd_recs[j].destination == -1)
+                j += 1
+            i = j
+            if has_ended:
+                print()
+                for rec in client_rec:
+                    print("*" + str(rec) + "*___", end="")
+                print()
                 avgs.append(sum(client_service_time))
-
-        # print("RECS : "+str(grpdRecs))
 
         completed = [r for r in recs if r.destination == -1 and r.arrival_date < time]
         num_cmplted = len(completed)
-        print(f"Cmplptd transactions : {num_cmplted}")
-        # print(f"RECORD CLIENT 0 : {completed[0]} ")
+        print(f"Cmplptd transactions : {num_cmplted} of {len(recs)}")
+
     return avgs
 
 
 def varExecTimeSimulations():
-
     n = 50
     times = []
-    for i in range(1,6):
-        avg = execSimulation(i*n, 1, createNetwork())
-        avgTime.append(sum(avg)/len(avg))
-        times.append(i*n)
+    for i in range(1, 6):
+        avg = execSimulation(i * n, 1, createNetwork())
+        avgTime.append(sum(avg) / len(avg))
+        times.append(i * n)
 
     fig = plt.figure()
     subplot = fig.add_subplot()
-    subplot.set_ybound(0, avgTime[0]+avgTime[0]/2)
+    subplot.set_ybound(0, avgTime[0] + avgTime[0] / 2)
     subplot.plot(times, avgTime, scaley=False)
     subplot.set_xlabel("Execution Time")
     subplot.set_ylabel("Average Response Time")
@@ -158,12 +165,12 @@ def varExecTimeSimulations():
 
 
 def varASimulations():
-    A = [a for a in range(1,36)]
+    A = [a for a in range(1, 36)]
     avg = []
     for a in A:
-        print(str(a)+" ", end=" - ")
-        avgTmp = execSimulation(10, 1, createNetwork(A=a))
-        avg.append(sum(avgTmp)/len(avgTmp))
+        # print(str(a)+" ", end=" - ")
+        avgTmp = execSimulation(50, 1, createNetwork(A=a))
+        avg.append(sum(avgTmp) / len(avgTmp))
 
     fig = plt.figure()
     subplot = fig.add_subplot()
@@ -179,29 +186,29 @@ def multiVarSimulation():
     A = [a for a in range(1, 36)]
     avg = []
     for a in A:
-        print(str(a) + " ", end=" - ")
-        avgTmp = execSimulation(10, 1, createNetwork(A=a))
+        # print(str(a) + " ", end=" - ")
+        avgTmp = execSimulation(100, 1, createNetwork(A=a))
         avg.append(sum(avgTmp) / len(avgTmp))
 
     R = 2 * 10000000
     avg2R = []
     for a in A:
-        print(str(a) + " ", end=" - ")
-        avgTmp = execSimulation(10, 1, createNetwork(A=a, R=R))
+        # print(str(a) + " ", end=" - ")
+        avgTmp = execSimulation(100, 1, createNetwork(A=a, R=R))
         avg2R.append(sum(avgTmp) / len(avgTmp))
 
     S = 2 * 1500000
     avg2S = []
     for a in A:
-        print(str(a) + " ", end=" - ")
-        avgTmp = execSimulation(10, 1, createNetwork(A=a, S=S))
+        # print(str(a) + " ", end=" - ")
+        avgTmp = execSimulation(100, 1, createNetwork(A=a, S=S))
         avg2S.append(sum(avgTmp) / len(avgTmp))
 
     nbServer = 2
     avg2SR = []
     for a in A:
-        print(str(a) + " ", end=" - ")
-        avgTmp = execSimulation(10, 1, createNetwork(A=a, nbServerSR=nbServer))
+        # print(str(a) + " ", end=" - ")
+        avgTmp = execSimulation(100, 1, createNetwork(A=a, nbServerSR=nbServer))
         avg2SR.append(sum(avgTmp) / len(avgTmp))
 
     fig = plt.figure()
@@ -210,7 +217,7 @@ def multiVarSimulation():
     subplot.plot(A, avg2S, 'g')
     subplot.plot(A, avg2R, 'b')
     subplot.plot(A, avg2SR, 'r')
-    subplot.set_ybound(0, max(avg)*2)
+    subplot.set_ybound(0, max(avg) * 2)
     subplot.set_xlabel("A")
     subplot.set_ylabel("Average Response Time")
     # subplot.set_ybound(0, avg[0] + avg[0] / 2)
@@ -218,9 +225,4 @@ def multiVarSimulation():
     plt.show()
 
 
-
-
-
 varASimulations()
-
-
